@@ -1,135 +1,98 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FormulaLab — 公式截图识别</title>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FormulaLab · 本地公式识别</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-<style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
-:root{font-family:'DM Sans','Noto Sans SC',system-ui,sans-serif;color:#172338;background:#f7f9fc;font-synthesis:none}*{box-sizing:border-box}body{margin:0}button,textarea,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.52}.shell{max-width:1280px;margin:auto;padding:0 38px}.topbar{height:84px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e9edf3}.brand{display:flex;align-items:center;gap:12px}.brand-icon{width:42px;height:42px;background:#2864db;color:white;display:grid;place-items:center;border-radius:12px;font-family:Georgia,serif;font-size:27px;box-shadow:0 5px 15px #2a67db30}.brand b{font-size:21px;letter-spacing:-.7px;display:block}.brand span{font-size:10px;color:#8a95aa;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-top:1px}.top-right{display:flex;align-items:center;gap:18px}.privacy{color:#39765c;background:#eaf6ef;border:1px solid #d4eddf;border-radius:99px;font-size:12px;display:flex;gap:7px;align-items:center;padding:8px 12px}.privacy svg{width:15px;height:15px}.version{color:#9aa4b4;font-size:12px}.hero{padding:44px 0 34px;text-align:center}.eyebrow{font-size:11px;color:#4a78d0;letter-spacing:2.1px;font-weight:700}.dot{display:inline-block;background:#4e88ee;width:7px;height:7px;border-radius:50%;margin-right:8px;vertical-align:1px;box-shadow:0 0 0 4px #e9f1ff}.hero h1{font-size:32px;letter-spacing:-.8px;margin:15px 0 9px;font-weight:700}.hero p{font-size:14px;color:#738198;margin:0;line-height:1.9}.workgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}.panel{background:#fff;border:1px solid #e8edf5;border-radius:17px;box-shadow:0 8px 32px #1d3e7208;padding:25px;min-width:0}.panel-heading,.panel-heading>div,.code-label,.code-label span,.foot-actions,.actions,.setting,.status-line{display:flex;align-items:center}.panel-heading{justify-content:space-between;margin-bottom:23px}.panel-heading>div{gap:10px}.panel-heading h2{margin:0;font-size:17px}.panel-number{background:#edf3ff;color:#3768c2;font-size:11px;font-weight:700;border-radius:6px;padding:5px 7px}.text-action{display:flex;gap:5px;align-items:center;background:none;border:0;color:#8190a6;font-size:12px}.text-action svg{width:13px;height:13px}.dropzone{height:276px;border:1.5px dashed #c8d4e6;background:#f9fbfe;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;transition:.2s;overflow:hidden;outline-offset:3px}.dropzone.drag-over{background:#edf4ff;border-color:#3d77e0}.upload-icon{margin:auto auto 15px;width:58px;height:58px;display:grid;place-items:center;background:#ecf3ff;color:#3774df;border-radius:16px}.upload-icon svg{width:27px;height:27px}.upload-empty h3{font-size:14px;margin:0 0 10px;font-weight:600}.upload-empty p{color:#8190a5;font-size:12px;margin:0 0 23px}.upload-empty kbd{background:#edf2f9;border:1px solid #e2e7f0;color:#566579;border-radius:4px;padding:3px 5px;font-size:11px}.file-types{font-size:10px;color:#a0abba;letter-spacing:1px}.image-frame{width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;padding:16px}.image-frame img{max-width:100%;max-height:100%;object-fit:contain}.image-foot{position:absolute;bottom:5px;right:8px;font-size:10px;color:#8b97a6;background:#fff9;padding:4px 7px;border-radius:5px}.hidden{display:none!important}.actions{gap:10px;margin-top:17px}.button{border:0;border-radius:9px;padding:12px 15px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:9px;transition:.15s;white-space:nowrap}.button svg{width:17px;height:17px}.button.secondary{color:#41536f;background:#f1f5fa;border:1px solid #e6ebf2}.button.secondary:hover:not(:disabled){background:#e6effa}.button.primary{background:#2d69dd;color:#fff;box-shadow:0 5px 13px #3a71d42a;flex:1}.button.primary:hover:not(:disabled){background:#1e58cc}.setting{justify-content:space-between;gap:12px;margin-top:20px;font-size:12px;color:#68788f}.setting select{border:1px solid #e5ebf3;border-radius:7px;background:white;padding:7px 8px;color:#586a82;max-width:75%;font-size:11px}.status-panel{margin-top:17px;padding:13px 14px;border-radius:10px;background:#f8fafc;border:1px solid #edf1f6}.status-line{gap:9px;font-size:12px;color:#5e7087;line-height:1.5;word-break:break-word}.status-led{width:8px;height:8px;background:#aeb9c8;border-radius:100%;flex:none}.status-led.working{background:#e2a12d;box-shadow:0 0 0 3px #fff2da}.status-led.ready{background:#31a271;box-shadow:0 0 0 3px #e5f8ee}.status-led.bad{background:#eb6666}.status-panel p{color:#9aa6b7;font-size:11px;line-height:1.6;margin:6px 0 0 17px;overflow-wrap:anywhere}.progress-track{height:5px;border-radius:99px;background:#e2eaf4;overflow:hidden;margin:13px 0 3px}.progress-fill{height:100%;width:0;background:#3975e2;transition:width .3s}.editable-label{color:#37956f;font-size:11px;display:flex;align-items:center;gap:7px}.editable-label span{width:6px;height:6px;background:#39a975;border-radius:50%}.result-caption{display:flex;gap:8px;align-items:center;font-weight:600;font-size:12px;color:#5d6e85;margin-bottom:11px}.result-caption svg{width:15px;height:15px;color:#5b8fe9}.formula-preview{min-height:137px;border-radius:10px;background:#fafcff;border:1px solid #e9eef6;display:flex;align-items:center;justify-content:center;overflow:auto;padding:16px;margin-bottom:21px}.preview-placeholder{text-align:center;color:#a5b1c3;font-size:12px}.preview-placeholder span{font-family:Georgia,serif;font-size:31px;color:#c3d3eb;display:block}.preview-placeholder p{margin:7px 0}.formula-preview .katex-display{margin:0}.formula-preview .katex{font-size:1.45em}.formula-preview.render-error{color:#b75c58;font-size:12px;text-align:left;justify-content:start}.code-label{justify-content:space-between;margin:0 0 9px;font-size:12px;font-weight:700;color:#50627b}.code-label span{gap:8px}.code-label svg{width:15px;height:15px;color:#6a91cc}.mini-button{border:1px solid #e6ecf4;background:#fff;border-radius:6px;color:#6d7e96;font-size:11px;padding:6px 10px;display:flex;align-items:center;gap:5px}.mini-button:hover{background:#f4f7fc}.mini-button svg{width:12px;height:12px}.result-panel textarea{resize:vertical;width:100%;height:117px;border:1px solid #e5ebf3;background:#fbfcfe;border-radius:9px;color:#28415f;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.7;padding:12px;outline:none}.result-panel textarea:focus{border-color:#7fa8f0;box-shadow:0 0 0 3px #eaf2ff}.mathtype-label{margin-top:17px}.mathtype-box{border:1px solid #e7ebf2;background:#fbfcfe;border-radius:9px;min-height:69px;padding:12px;font:12px/1.7 Consolas,'Courier New',monospace;color:#6c7c93;white-space:pre-wrap;overflow-wrap:anywhere}.foot-actions{gap:10px;margin-top:16px}.button.small{font-size:11px;padding:9px 11px}.button.small svg{width:14px;height:14px}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0 30px}.info-card{display:flex;gap:13px;align-items:start;background:#f0f5fb;border:1px solid #e8eef7;padding:16px;border-radius:10px}.info-icon{color:#527fbd;flex:none}.info-icon svg{height:19px;width:19px}.info-card b{font-size:12px;color:#466181}.info-card p{font-size:11px;color:#8798ac;line-height:1.75;margin:5px 0 0}footer{border-top:1px solid #e7ecf2;padding:20px 0 28px;display:flex;justify-content:space-between;color:#9ca9b9;font-size:11px}footer a{color:#7189aa;text-decoration:none}.toast{position:fixed;bottom:25px;left:50%;transform:translate(-50%,15px);background:#22334b;color:white;font-size:12px;padding:12px 18px;border-radius:8px;box-shadow:0 8px 22px #14294334;opacity:0;pointer-events:none;transition:.2s;max-width:90%;z-index:999}.toast.visible{opacity:1;transform:translate(-50%,0)}.toast.error{background:#b84d4d}@media(max-width:850px){.shell{padding:0 18px}.topbar{height:70px}.hero{padding:32px 5px 26px}.hero h1{font-size:25px}.workgrid,.info-grid{grid-template-columns:1fr}.panel{padding:20px}.info-grid{gap:10px}.top-right{gap:7px}.version{display:none}}@media(max-width:430px){.hero h1{font-size:22px}.privacy{font-size:10px}.actions{flex-wrap:wrap}.actions .button{flex:1}.setting{flex-wrap:wrap}.setting select{max-width:100%}.dropzone{height:230px}.foot-actions{flex-wrap:wrap}}
-
-.ico{display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;min-width:1em} .code-label .ico{font-family:monospace} </style></head><body><div id="app"></div>
-<script type="module">const $ = (sel) => document.querySelector(sel);
-const example = String.raw`\Gamma=\frac{Z_{\mathrm{in}}-Z_0}{Z_{\mathrm{in}}+Z_0}=|\Gamma|e^{j\varphi}`;
-let imageBlob=null,imageURL='',modelReady=false,activeJob=0,recognizing=false;
-
-$('#app').innerHTML = `
-<div class="shell">
-  <header class="topbar"><div class="brand"><div class="brand-icon">∑</div><div><b>FormulaLab</b><span>Image to Equation</span></div></div><div class="top-right"><span class="privacy"><span class="ico" aria-hidden="true">✓</span> 浏览器本地识别</span><span class="version">v1.1</span></div></header>
-  <main>
-    <div class="hero"><div class="eyebrow"><span class="dot"></span> AI-POWERED FORMULA RECOGNITION</div><h1>从公式截图，到可编辑的代码</h1><p>粘贴或上传数学公式截图，使用浏览器中的 AI 识别模型生成 LaTeX，并快速复制到 MathType。</p></div>
-    <div class="workgrid">
-      <section class="panel input-panel"><div class="panel-heading"><div><span class="panel-number">01</span><h2>公式图片</h2></div><button class="text-action" id="clearImage"><span class="ico" aria-hidden="true">↺</span> 清除</button></div>
-        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="上传公式截图"><input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
-          <div id="emptyUpload" class="upload-empty"><div class="upload-icon"><span class="ico" aria-hidden="true">⇧</span></div><h3>将公式图片拖拽到此处</h3><p>或点击上传、使用 <kbd>Ctrl</kbd> + <kbd>V</kbd> 粘贴截图</p><span class="file-types">PNG · JPG · WEBP · BMP</span></div>
-          <div id="imageFrame" class="image-frame hidden"><img id="sourceImage" alt="用户上传的公式截图"><div class="image-foot">原始公式截图</div></div>
-        </div>
-        <div class="actions"><button class="button secondary" id="uploadBtn"><span class="ico" aria-hidden="true">▣</span> 选择图片</button><button class="button primary" id="recognizeBtn" disabled><span class="ico" aria-hidden="true">✦</span><span>开始识别</span></button></div>
-        <div class="setting"><label for="computeMode">推理设备</label><select id="computeMode"><option value="wasm">CPU · 兼容模式（推荐）</option><option value="webgpu">GPU · WebGPU（实验性）</option></select></div>
-        <div id="statusPanel" class="status-panel"><div class="status-line"><span class="status-led" id="statusDot"></span><span id="statusText">模型尚未加载，首次识别需要下载模型</span></div><div class="progress-track hidden" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div><p id="statusHint">模型较大，首次下载可能需要一些时间；后续可利用浏览器缓存。</p></div>
-      </section>
-      <section class="panel result-panel"><div class="panel-heading"><div><span class="panel-number">02</span><h2>识别结果</h2></div><span class="editable-label"><span></span> 可实时编辑</span></div>
-        <div class="result-caption"><span class="ico" aria-hidden="true">∑</span> 公式实时预览</div>
-        <div id="formulaPreview" class="formula-preview"><div class="preview-placeholder"><span>∫</span><p>识别完成后，公式将显示在这里</p></div></div>
-        <div class="code-label"><span><span class="ico" aria-hidden="true">{}</span> LaTeX 代码</span><button class="mini-button" data-copy="latex"><span class="ico" aria-hidden="true">⧉</span> 复制</button></div>
-        <textarea id="latexInput" spellcheck="false" placeholder="识别结果将在此显示；也可以直接输入 LaTeX 进行预览…"></textarea>
-        <div class="code-label mathtype-label"><span><span class="ico" aria-hidden="true">≡</span> MathType 兼容输入</span><button class="mini-button" data-copy="mathtype"><span class="ico" aria-hidden="true">⧉</span> 复制</button></div>
-        <div class="mathtype-box" id="mathtypeCode">识别后生成可粘贴的 LaTeX 输入文本</div>
-        <div class="foot-actions"><button class="button secondary small" id="sampleBtn"><span class="ico" aria-hidden="true">✦</span> 试用示例公式</button><button class="button secondary small" id="saveBtn"><span class="ico" aria-hidden="true">↓</span> 保存 .tex</button></div>
-      </section>
-    </div>
-    <div class="info-grid"><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">✓</span></div><div><b>图片不上传到识别服务器</b><p>模型在你的浏览器中推理；首次需要从模型托管站下载权重。</p></div></div><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">≡</span></div><div><b>MathType 使用说明</b><p>输出的是 MathType 可导入的 LaTeX 文本，并非 MathType 原生二进制格式；需要在 MathType 中通过 LaTeX 输入/转换功能使用。</p></div></div></div>
-  </main><footer><span>FormulaLab · Browser AI Math OCR · 下载进度修复版</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller-ONNX ↗</a></footer>
-</div><div id="toast" class="toast" role="status"></div>`;
-function toast(message, isError=false) { const box=$('#toast'); box.textContent=message; box.classList.toggle('error',isError);box.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('visible'),3200); }
-function setStatus(message, level='neutral', hint) { $('#statusText').textContent=message; $('#statusDot').className='status-led '+level; if(hint!==undefined) $('#statusHint').textContent=hint; }
-function setBusy(value) { recognizing=value; $('#recognizeBtn').disabled=value || !imageBlob; $('#recognizeBtn span').textContent=value?'正在识别…':'开始识别'; $('#uploadBtn').disabled=value; $('#computeMode').disabled=value || modelReady; }
-function normalizeLatex(s) { return s.trim().replace(/^\$\$([\s\S]*)\$\$$/,'$1').replace(/^\$([\s\S]*)\$$/,'$1').replace(/^\\\[([\s\S]*)\\\]$/,'$1').replace(/^\\\(([\s\S]*)\\\)$/,'$1').trim(); }
-function render() { let latex=normalizeLatex($('#latexInput').value); $('#mathtypeCode').textContent=latex||'识别后生成可粘贴的 LaTeX 输入文本'; const target=$('#formulaPreview'); if(!latex) { target.innerHTML='<div class="preview-placeholder"><span>∫</span><p>识别完成后，公式将显示在这里</p></div>';return; }try { katex.render(latex,target,{displayMode:true,throwOnError:true,strict:'ignore',trust:false, maxExpand:1000}); target.classList.remove('render-error'); } catch(error) {target.textContent='公式暂时无法渲染：'+error.message; target.classList.add('render-error');}}
-$('#latexInput').addEventListener('input',render);
-function acceptImage(file) { if(!file || !file.type.startsWith('image/')) { toast('请选择有效的图片文件（PNG/JPG/WEBP 等）',true);return; }if(file.size>20*1024*1024){toast('图片请小于 20 MB',true);return;} if(imageURL) URL.revokeObjectURL(imageURL); imageBlob=file;imageURL=URL.createObjectURL(file);$('#sourceImage').src=imageURL;$('#emptyUpload').classList.add('hidden');$('#imageFrame').classList.remove('hidden');$('#recognizeBtn').disabled=recognizing;toast('公式图片已载入，可开始识别'); }
-$('#uploadBtn').onclick=()=>$('#fileInput').click();$('#fileInput').onchange=e=>{acceptImage(e.target.files[0]);e.target.value='';};
-$('#dropzone').onclick=()=>{if(!imageBlob)$('#fileInput').click();};$('#dropzone').onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!imageBlob){e.preventDefault();$('#fileInput').click();}};
-$('#clearImage').onclick=()=>{imageBlob=null;if(imageURL)URL.revokeObjectURL(imageURL);imageURL='';$('#sourceImage').removeAttribute('src');$('#imageFrame').classList.add('hidden');$('#emptyUpload').classList.remove('hidden');$('#recognizeBtn').disabled=true;};
-for (const name of ['dragenter','dragover']) $('#dropzone').addEventListener(name,e=>{e.preventDefault();$('#dropzone').classList.add('drag-over');});
-for (const name of ['dragleave','drop']) $('#dropzone').addEventListener(name,e=>{e.preventDefault();$('#dropzone').classList.remove('drag-over');});
-$('#dropzone').addEventListener('drop',e=>acceptImage(Array.from(e.dataTransfer.files).find(f=>f.type.startsWith('image/'))));
-document.addEventListener('paste',e=>{const item=Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/'));if(item){e.preventDefault();acceptImage(item.getAsFile());}});
-let recognizerPromise = null;
-// 每个 ONNX 资源有自己独立的下载进度。不能将每次回调的百分比当作总进度。
-const modelDownloads = new Map();
-function showModelProgress(p) {
-  const filename = String(p.file || p.name || '模型资源');
-  const fileLabel = filename.split('/').pop();
-  if (p.status === 'initiate') {
-    if (!modelDownloads.has(filename)) modelDownloads.set(filename, {loaded:0,total:0,done:false});
-  } else if (p.status === 'progress') {
-    const old = modelDownloads.get(filename) || {loaded:0,total:0,done:false};
-    const total = Number(p.total) || old.total || 0;
-    const loaded = Number(p.loaded) || (total && Number.isFinite(p.progress) ? total*p.progress/100 : old.loaded);
-    modelDownloads.set(filename,{loaded,total,done:false});
-  } else if (p.status === 'done' || p.status === 'ready') {
-    const old = modelDownloads.get(filename) || {loaded:0,total:0,done:false};
-    modelDownloads.set(filename,{loaded:old.total||old.loaded,total:old.total,done:true});
-  }
-  const entries = [...modelDownloads.entries()];
-  const complete = entries.filter(([,v])=>v.done).length;
-  const active = [...entries].reverse().find(([,v])=>!v.done && v.loaded>0);
-  const name = active ? active[0].split('/').pop() : fileLabel;
-  const v = active ? active[1] : modelDownloads.get(filename);
-  const mb = n => (n/1048576).toFixed(1);
-  const currentPercent = v?.total ? Math.min(100,100*v.loaded/v.total) : (Number.isFinite(p.progress)?p.progress:null);
-  // 这根进度条仅代表当前文件，不代表全部模型文件。
-  $('#progressFill').style.width = currentPercent == null ? '0%' : Math.max(0,currentPercent)+'%';
-  const sizeInfo = v?.total ? `${mb(v.loaded)} / ${mb(v.total)} MB` : (v?.loaded ? `${mb(v.loaded)} MB` : '等待下载');
-  if(active || p.status==='progress') {
-    setStatus(`下载文件：${name}`, 'working', `${sizeInfo} · 已完成 ${complete} 个资源。进度条只表示当前文件，不是总体进度。`);
-  } else {
-    setStatus(`正在准备模型资源（已完成 ${complete} 个文件）`,'working',
-      '多个模型文件会分别下载。完成下载后仍需进行模型初始化。');
-  }
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#16283d;background:#f3f6fb}*{box-sizing:border-box}body{margin:0}header{background:#fff;border-bottom:1px solid #e4eaf2;padding:18px max(20px,calc((100vw - 1160px)/2));display:flex;align-items:center;justify-content:space-between}header strong{font-size:23px;letter-spacing:-.5px}header small{font-weight:400;color:#66778f;font-size:12px;margin-left:12px}main{max-width:1160px;margin:30px auto;padding:0 18px}h1{font-size:25px;margin:0 0 8px}p{color:#62748b;line-height:1.65}.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.panel{background:white;border:1px solid #e2e9f1;border-radius:16px;padding:22px;box-shadow:0 5px 24px rgba(42,69,100,.035)}.panel h2{font-size:17px;margin:0 0 16px}.drop{border:2px dashed #c5d3e5;border-radius:12px;background:#f9fbfe;min-height:215px;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;position:relative;overflow:hidden;gap:8px;text-align:center;padding:15px}.drop.drag{background:#edf5ff;border-color:#468aff}.drop img{max-height:290px;max-width:100%;object-fit:contain}.drop strong{font-size:16px}.drop span{font-size:12px;color:#798aa0}.mini{font-size:12px;color:#60738d}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}.button{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d6e1ed;border-radius:9px;background:#fff;padding:10px 14px;font-size:13px;font-weight:650;color:#29435e;min-height:39px}.button.primary{background:#2563eb;color:white;border-color:#2563eb}.button:disabled{opacity:.5;cursor:not-allowed}.button:hover:not(:disabled){filter:brightness(.97)}.line{height:1px;background:#eaf0f6;margin:18px 0}label.heading{display:block;font-size:13px;font-weight:700;margin:14px 0 9px}.preview{background:#f8faff;border:1px solid #e7eef8;border-radius:11px;padding:25px 12px;min-height:120px;overflow:auto;display:flex;align-items:center;justify-content:center;color:#7a8798;text-align:center}.preview .katex-display{margin:0}.code{width:100%;min-height:145px;padding:12px;border:1px solid #dce5ef;border-radius:10px;font-family:Consolas,Monaco,monospace;font-size:13px;line-height:1.6;resize:vertical;outline:none}.code:focus{border-color:#5995f6}.status{border-radius:10px;background:#f6f9ff;border:1px solid #e0e9fa;padding:13px 14px;font-size:13px;line-height:1.6;word-break:break-word}.status.error{border-color:#f1bdbd;background:#fff7f6;color:#a13030}.status.ok{border-color:#bedeca;background:#f5fff8;color:#22643f}.progress{height:8px;background:#e4eaf3;border-radius:8px;overflow:hidden;margin-top:10px}.fill{height:100%;width:0;background:#2563eb;transition:width .2s}.file-row{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#64758a;margin-top:5px}.settings{margin-top:22px}.settings summary{cursor:pointer;font-weight:650;font-size:13px}.setting-body{margin-top:13px;font-size:13px;color:#50647e}.url{width:100%;border-radius:9px;border:1px solid #dce5ef;padding:11px;font-size:12px}.note{margin:24px 0;color:#718198;font-size:12px;line-height:1.8}a{color:#2563eb}code{background:#eef2f8;padding:2px 4px;border-radius:4px}@media(max-width:800px){.grid{grid-template-columns:1fr}header{padding:14px 20px}header small{display:none}main{margin:18px auto}.panel{padding:16px}} 
+</style>
+</head>
+<body>
+<header><div><strong>∑ FormulaLab</strong><small>Pix2Text-MFR · 基于 OCR-buddy 识别方案</small></div><span class="mini">纯前端 · 图片不上传</span></header>
+<main><h1>公式截图转换</h1><p>粘贴截图、上传图片或拖拽文件，在浏览器内识别数学公式，并复制 LaTeX / MathType 兼容代码。</p>
+<div class="grid">
+<section class="panel"><h2>01 · 公式图片</h2>
+<div id="drop" class="drop" tabindex="0" role="button" aria-label="选择公式截图"><div id="empty"><div style="font-size:38px;color:#8aa7d5">▧</div><strong>点击、拖拽或 Ctrl+V 粘贴公式截图</strong><br><span>PNG / JPG / WebP</span></div><img id="source" hidden alt="待识别的公式截图"></div>
+<input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+<div class="actions"><button class="button" id="pick">选择图片</button><button class="button primary" id="recognize">开始识别</button></div>
+<div id="status" class="status" role="status">请先上传公式图片。首次使用需加载约 53 MB 模型，成功后由浏览器缓存；可以在“模型来源”中切换为本站模型。</div>
+<div id="progressBox" hidden><div class="progress"><div id="fill" class="fill"></div></div><div class="file-row"><span id="fileName">等待加载</span><span id="filePercent">0%</span></div></div>
+<details class="settings"><summary>模型来源与高级设置</summary><div class="setting-body">
+<p>优先从本站 <code>models/</code> 获取模型。如果未上传模型，可以选择 OCR-buddy 官方 GitHub 原始文件地址作为回退。</p>
+<label class="heading" for="sourceMode">模型来源</label><select id="sourceMode" class="url"><option value="github">OCR-buddy GitHub 原始文件（开箱即用）</option><option value="local">本站 models/ 文件夹（部署后推荐）</option></select>
+<div class="actions"><button id="cacheInfo" class="button">查看缓存</button><button id="clearCache" class="button">清除模型缓存</button></div>
+<label class="heading">或手动导入三个模型文件</label><input id="modelsUpload" type="file" multiple accept=".onnx,.json"><p class="mini">可选：mfr_encoder.onnx、mfr_decoder.onnx、mfr_tokenizer.json。导入后缓存到当前站点，不会上传服务器。</p>
+</div></details>
+</section>
+<section class="panel"><h2>02 · 识别结果</h2><label class="heading">公式预览</label><div id="preview" class="preview">识别后的公式将显示在这里</div>
+<label class="heading" for="latex">LaTeX 代码（可编辑）</label><textarea id="latex" class="code" spellcheck="false" placeholder="识别结果将在此显示，也可以直接输入 LaTeX..."></textarea>
+<div class="actions"><button id="copyLatex" class="button primary">复制 LaTeX</button><button id="copyMath" class="button">复制 MathType 兼容代码</button><button id="downloadTex" class="button">保存 .tex</button></div>
+<p class="mini">MathType 输出采用其支持的 LaTeX 输入形式，并非原生 MathType 二进制公式。复杂公式请对照原图校核。</p></section>
+</div><p class="note">开源致谢：<a href="https://github.com/Fanfulla/OCR-buddy" target="_blank" rel="noopener">OCR-buddy</a>（MIT）、<a href="https://huggingface.co/breezedeus/pix2text-mfr" target="_blank" rel="noopener">Pix2Text-MFR</a>（MIT）、<a href="https://onnxruntime.ai/" target="_blank" rel="noopener">ONNX Runtime Web</a>（MIT）、KaTeX（MIT）。公式处理在浏览器本地完成；首次加载可能从配置来源获取运行库和模型。</p></main>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+<script>
+'use strict';
+const $ = x => document.getElementById(x);
+const MODEL_FILES=['mfr_encoder.onnx','mfr_decoder.onnx','mfr_tokenizer.json'];
+const REMOTE_BASE='https://raw.githubusercontent.com/Fanfulla/OCR-buddy/main/public/models/';
+const CACHE_NAME='formulalab-pix2text-mfr-v1';
+const MODEL_SIZE={ 'mfr_encoder.onnx':23083189, 'mfr_decoder.onnx':30114937, 'mfr_tokenizer.json':39161 };
+const END=2, START=2, MAX=256, REPEAT_LIMIT=12, SIZE=384;
+let imgBlob=null, sessions=null, tokenizer=null, decoded=null, busy=false;
+const blobs=new Map();const progress={};
+function show(text,type=''){const el=$('status');el.textContent=text;el.className='status '+type;}
+function showProgress(name,done,total){progress[name]={done,total:total||MODEL_SIZE[name]||0};const all=MODEL_FILES.reduce((sum,f)=>sum+(progress[f]?.done||0),0);const totalAll=MODEL_FILES.reduce((sum,f)=>sum+(progress[f]?.total||MODEL_SIZE[f]||0),0);$('progressBox').hidden=false;$('fill').style.width=Math.min(100,Math.round(all/totalAll*100))+'%';$('fileName').textContent=name;$('filePercent').textContent=(done/1048576).toFixed(1)+' / '+((total||0)/1048576).toFixed(1)+' MB · 总体 '+Math.min(100,Math.round(all/totalAll*100))+'%';}
+function pretty(err){return String(err?.message||err).slice(0,600)}
+async function writeClipboard(text){try{await navigator.clipboard.writeText(text);show('已复制到剪贴板。','ok')}catch{const t=$('latex');t.focus();t.select();show('自动复制受到浏览器限制，请按 Ctrl+C 复制。','error')}}
+function render(){const t=$('latex').value.trim();const el=$('preview');if(!t){el.textContent='识别后的公式将显示在这里';return}try{katex.render(t,el,{throwOnError:true,displayMode:true,trust:false,strict:'ignore'})}catch(e){el.textContent='公式渲染失败：'+pretty(e)}}
+$('latex').addEventListener('input',render);
+$('pick').onclick=()=> $('file').click();$('drop').onclick=()=> $('file').click();$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+function acceptFile(f){if(!f||!f.type.startsWith('image/')){show('请选择图片文件。','error');return}imgBlob=f;const img=$('source');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);img.dataset.url=URL.createObjectURL(f);img.src=img.dataset.url;img.hidden=false;$('empty').hidden=true;show('图片已准备好，点击“开始识别”。')}
+$('file').onchange=e=>acceptFile(e.target.files[0]);
+for(const ev of ['dragenter','dragover'])$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('drag')});
+for(const ev of ['dragleave','drop'])$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('drag')});
+$('drop').addEventListener('drop',e=>acceptFile([...e.dataTransfer.files].find(f=>f.type.startsWith('image/'))));
+document.addEventListener('paste',e=>{const f=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'))?.getAsFile();if(f)acceptFile(f)});
+$('copyLatex').onclick=()=>writeClipboard($('latex').value);
+$('copyMath').onclick=()=>writeClipboard($('latex').value);
+$('downloadTex').onclick=()=>{const url=URL.createObjectURL(new Blob([$('latex').value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='formula.tex';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('sourceMode').onchange=()=>{sessions=null;show('已切换模型来源，下次识别将重新加载模型。')};
+async function getCache(){if(!('caches'in window))throw Error('当前浏览器环境不支持 Cache Storage。请使用 HTTPS 的 Chrome/Edge。');return caches.open(CACHE_NAME)}
+$('cacheInfo').onclick=async()=>{try{const c=await getCache();const keys=await c.keys();show('模型缓存：'+(keys.map(x=>x.url.split('/').pop()).join('、')||'暂无')+'。','ok')}catch(e){show(pretty(e),'error')}};
+$('clearCache').onclick=async()=>{await caches.delete(CACHE_NAME);blobs.clear();sessions=null;tokenizer=null;decoded=null;show('模型缓存已清除。','ok')};
+function cacheKey(name){return new URL('./models/'+name,location.href).href}
+$('modelsUpload').onchange=async e=>{try{const c=await getCache();let count=0;for(const file of e.target.files){if(!MODEL_FILES.includes(file.name))continue;await c.put(cacheKey(file.name),new Response(file,{headers:{'content-type':file.name.endsWith('.json')?'application/json':'application/octet-stream'}}));blobs.set(file.name,await file.arrayBuffer());showProgress(file.name,file.size,file.size);count++}sessions=null;tokenizer=null;decoded=null;show('已导入 '+count+' 个文件到浏览器缓存。'+(count<3?'请确认三个模型文件都已导入。':''),count===3?'ok':'');}catch(err){show('导入失败：'+pretty(err),'error')}};
+async function loadFile(name){if(blobs.has(name))return blobs.get(name);const cache=await getCache();const k=cacheKey(name);let res=await cache.match(k);if(res){const buf=await res.arrayBuffer();blobs.set(name,buf);showProgress(name,buf.byteLength,buf.byteLength);return buf}
+const url=$('sourceMode').value==='local'?k:REMOTE_BASE+name;
+show('正在下载 '+name+'。如果本站未上传 models/，请切换到 GitHub 备用源。');
+let lastErr;
+for(let attempt=0;attempt<2;attempt++)try{
+ const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),180000);
+ let r;try{r=await fetch(url,{signal:controller.signal,cache:'default'})}finally{clearTimeout(timer)}
+ if(!r.ok)throw Error('HTTP '+r.status+' '+name+'：'+url);
+ const total=Number(r.headers.get('content-length'))||MODEL_SIZE[name];const reader=r.body?.getReader();let buf;
+ if(reader){const chunks=[];let size=0;while(true){const {value,done}=await reader.read();if(done)break;chunks.push(value);size+=value.byteLength;showProgress(name,size,total)}buf=new Uint8Array(size);let off=0;for(const chunk of chunks){buf.set(chunk,off);off+=chunk.length}buf=buf.buffer}
+ else buf=await r.arrayBuffer();
+ if(buf.byteLength<1000 && name.endsWith('.onnx'))throw Error('下载内容过小，可能获取到了 Git LFS 指针或错误页面。');
+ const response=new Response(buf.slice(0),{headers:{'content-type':name.endsWith('.json')?'application/json':'application/octet-stream'}});
+ try{await cache.put(k,response)}catch(e){show('文件已下载，但浏览器缓存写入失败：'+pretty(e))}
+ blobs.set(name,buf);showProgress(name,buf.byteLength,buf.byteLength);return buf;
+}catch(e){lastErr=e;show('下载 '+name+' 失败（尝试 '+(attempt+1)+'/2）：'+pretty(e),'error')}
+ throw Error('无法获取 '+name+'：'+pretty(lastErr)+'。请检查模型来源或手动导入模型。');
 }
-
-async function loadModel() {
- if(recognizerPromise)return recognizerPromise;
- const selected=$('#computeMode').value;
- const device=selected==='webgpu'&&('gpu' in navigator)?'webgpu':'wasm';
- $('#progressTrack').classList.remove('hidden');
- setStatus('正在连接 TexTeller3 模型资源…','working','首次下载需要获取多个较大的文件。每个文件单独显示进度。');
- recognizerPromise=(async()=>{
-   const {pipeline,env}=await import('https://esm.sh/@huggingface/transformers@3.7.2');
-   env.allowRemoteModels=true;
-   env.useBrowserCache=true;
-   const make=async d=>pipeline('image-to-text','onnx-community/TexTeller3-ONNX',{
-     device:d,dtype:d==='webgpu'?'fp16':'q8',
-     progress_callback:showModelProgress
-   });
-   let pipe;
-   try{pipe=await make(device);}catch(e){if(device!=='webgpu')throw e;toast('GPU 模式不可用，正在尝试 CPU 模式');pipe=await make('wasm');}
-   modelReady=true;$('#computeMode').disabled=true;$('#progressTrack').classList.add('hidden');
-   setStatus('模型已就绪','ready','识别在浏览器内完成。');
-   return pipe;
- })().catch(e=>{recognizerPromise=null;$('#progressTrack').classList.add('hidden');throw e;});
- return recognizerPromise;
-}
-function readAsDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
-$('#recognizeBtn').onclick=async()=>{
- if(!imageBlob||recognizing)return;
- setBusy(true);$('#progressFill').style.width='0%';const id=++activeJob;
- try{
-  const url=await readAsDataURL(imageBlob);
-  const pipe=await loadModel();
-  setStatus('正在识别公式…','working','复杂公式可能需要更长时间。');
-  const result=await pipe(url,{max_new_tokens:512});
-  if(id!==activeJob)return;
-  const latex=Array.isArray(result)?result[0]?.generated_text:result?.generated_text;
-  if(!latex||typeof latex!=='string')throw new Error('模型没有返回有效公式');
-  $('#latexInput').value=normalizeLatex(latex);render();
-  setStatus('识别完成 · 可核对并修改','ready','请注意检查上下标、括号和符号。');toast('识别完成');
- }catch(e){setStatus('识别失败','bad',String(e?.message||e)+'。若是网络问题，请确认可以访问 Hugging Face 及 CDN。');toast('识别失败：'+String(e?.message||e),true);}
- finally{setBusy(false);}
-};
-$('#sampleBtn').onclick=()=>{$('#latexInput').value=example;render();toast('示例公式已填入，可直接编辑');};
-async function copyValue(value){try{await navigator.clipboard.writeText(value);toast('已复制到剪贴板');}catch{const ta=document.createElement('textarea');ta.value=value;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();toast(ok?'已复制到剪贴板':'复制失败，请手动选择文本',!ok);}}
-document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=()=>{const val=normalizeLatex($('#latexInput').value);if(!val){toast('请先识别或输入公式',true);return;}copyValue(val);});
-$('#saveBtn').onclick=()=>{const code=normalizeLatex($('#latexInput').value);if(!code){toast('请先识别或输入公式',true);return;}const blob=new Blob([`\\[\n${code}\n\\]\n`],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='formula.tex';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-render();
-
-</script></body></html>
+function byteInverse(){const bs=[];for(let i=33;i<=126;i++)bs.push(i);for(let i=161;i<=172;i++)bs.push(i);for(let i=174;i<=255;i++)bs.push(i);const cs=bs.slice();let n=0;for(let i=0;i<256;i++)if(!bs.includes(i)){bs.push(i);cs.push(256+n++)}const m=new Map();bs.forEach((b,i)=>m.set(String.fromCharCode(cs[i]),b));return m}
+async function getTokenizer(){if(tokenizer)return tokenizer;const data=JSON.parse(new TextDecoder().decode(await loadFile('mfr_tokenizer.json')));const pieces=[];for(const [piece,id] of Object.entries(data.model.vocab))pieces[id]=piece;tokenizer={pieces,special:new Set((data.added_tokens||[]).filter(x=>x.special).map(x=>x.id)),inv:byteInverse()};return tokenizer}
+function decodeIds(ids){const {pieces,special,inv}=tokenizer;const s=ids.filter(id=>!special.has(id)).map(id=>pieces[id]||'').join('');const bytes=[];for(const ch of s){const b=inv.get(ch);if(b!==undefined)bytes.push(b)}return new TextDecoder().decode(new Uint8Array(bytes)).trim()}
+async function init(){if(sessions)return sessions;if(typeof ort==='undefined')throw Error('ONNX Runtime Web 未加载，请检查 jsDelivr CDN。');ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';ort.env.wasm.numThreads=1;
+await getTokenizer();const [encData,decData]=await Promise.all([loadFile('mfr_encoder.onnx'),loadFile('mfr_decoder.onnx')]);show('模型下载完成，正在初始化 CPU 推理会话...');
+const options={executionProviders:['wasm'],graphOptimizationLevel:'all',logSeverityLevel:3};
+const enc=await ort.InferenceSession.create(encData,options);const dec=await ort.InferenceSession.create(decData,options);sessions={enc,dec};return sessions}
+async function tensorFromImage(){const bitmap=await createImageBitmap(imgBlob);const canvas=document.createElement('canvas');canvas.width=canvas.height=SIZE;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,SIZE,SIZE);ctx.drawImage(bitmap,0,0,SIZE,SIZE);bitmap.close();const rgba=ctx.getImageData(0,0,SIZE,SIZE).data,plane=SIZE*SIZE,buf=new Float32Array(3*plane);for(let p=0;p<plane;p++)for(let c=0;c<3;c++)buf[c*plane+p]=rgba[p*4+c]/127.5-1;return new ort.Tensor('float32',buf,[1,3,SIZE,SIZE])}
+async function recognize(){if(busy)return;if(!imgBlob){show('请先上传公式图片。','error');return}busy=true;$('recognize').disabled=true;try{const {enc,dec}=await init();show('模型已加载，正在分析截图...');let input=await tensorFromImage();const encOut=await enc.run({pixel_values:input});const hidden=encOut[enc.outputNames[0]];const ids=[START];let repeat=1,degenerate=false;
+for(let step=0;step<MAX;step++){if(step%10===0){show('正在识别公式：已生成 '+step+' 个 token...');await new Promise(r=>setTimeout(r,0))}const token=new ort.Tensor('int64',BigInt64Array.from(ids.map(BigInt)),[1,ids.length]);const out=await dec.run({input_ids:token,encoder_hidden_states:hidden});const logits=out[dec.outputNames[0]],vocab=Number(logits.dims[2]),off=(ids.length-1)*vocab,values=logits.data;let next=0,best=-Infinity;for(let i=0;i<vocab;i++){let v=values[off+i];if(v>best){best=v;next=i}}if(next===END)break;repeat=next===ids[ids.length-1]?repeat+1:1;if(repeat>=REPEAT_LIMIT){degenerate=true;break}ids.push(next)}if(ids.length>=MAX)degenerate=true;const tex=decodeIds(ids.slice(1));if(!tex||degenerate)throw Error('未能可靠识别该公式，请换一张清晰截图或缩小公式范围。');$('latex').value=tex;render();show('识别完成。请对照原图核对符号，复杂公式可能出现误差。','ok')
+}catch(e){console.error(e);show('识别失败：'+pretty(e),'error')}finally{busy=false;$('recognize').disabled=false}}
+$('recognize').onclick=recognize;
+</script>
+</body></html>
