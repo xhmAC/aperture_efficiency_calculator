@@ -12,7 +12,7 @@ let imageBlob=null,imageURL='',modelReady=false,activeJob=0,recognizing=false;
 
 $('#app').innerHTML = `
 <div class="shell">
-  <header class="topbar"><div class="brand"><div class="brand-icon">∑</div><div><b>FormulaLab</b><span>Image to Equation</span></div></div><div class="top-right"><span class="privacy"><span class="ico" aria-hidden="true">✓</span> 浏览器本地识别</span><span class="version">v1.0</span></div></header>
+  <header class="topbar"><div class="brand"><div class="brand-icon">∑</div><div><b>FormulaLab</b><span>Image to Equation</span></div></div><div class="top-right"><span class="privacy"><span class="ico" aria-hidden="true">✓</span> 浏览器本地识别</span><span class="version">v1.1</span></div></header>
   <main>
     <div class="hero"><div class="eyebrow"><span class="dot"></span> AI-POWERED FORMULA RECOGNITION</div><h1>从公式截图，到可编辑的代码</h1><p>粘贴或上传数学公式截图，使用浏览器中的 AI 识别模型生成 LaTeX，并快速复制到 MathType。</p></div>
     <div class="workgrid">
@@ -36,7 +36,7 @@ $('#app').innerHTML = `
       </section>
     </div>
     <div class="info-grid"><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">✓</span></div><div><b>图片不上传到识别服务器</b><p>模型在你的浏览器中推理；首次需要从模型托管站下载权重。</p></div></div><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">≡</span></div><div><b>MathType 使用说明</b><p>输出的是 MathType 可导入的 LaTeX 文本，并非 MathType 原生二进制格式；需要在 MathType 中通过 LaTeX 输入/转换功能使用。</p></div></div></div>
-  </main><footer><span>FormulaLab · Browser AI Math OCR</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller-ONNX ↗</a></footer>
+  </main><footer><span>FormulaLab · Browser AI Math OCR · 下载进度修复版</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller-ONNX ↗</a></footer>
 </div><div id="toast" class="toast" role="status"></div>`;
 function toast(message, isError=false) { const box=$('#toast'); box.textContent=message; box.classList.toggle('error',isError);box.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('visible'),3200); }
 function setStatus(message, level='neutral', hint) { $('#statusText').textContent=message; $('#statusDot').className='status-led '+level; if(hint!==undefined) $('#statusHint').textContent=hint; }
@@ -53,25 +53,53 @@ for (const name of ['dragleave','drop']) $('#dropzone').addEventListener(name,e=
 $('#dropzone').addEventListener('drop',e=>acceptImage(Array.from(e.dataTransfer.files).find(f=>f.type.startsWith('image/'))));
 document.addEventListener('paste',e=>{const item=Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/'));if(item){e.preventDefault();acceptImage(item.getAsFile());}});
 let recognizerPromise = null;
+// 每个 ONNX 资源有自己独立的下载进度。不能将每次回调的百分比当作总进度。
+const modelDownloads = new Map();
+function showModelProgress(p) {
+  const filename = String(p.file || p.name || '模型资源');
+  const fileLabel = filename.split('/').pop();
+  if (p.status === 'initiate') {
+    if (!modelDownloads.has(filename)) modelDownloads.set(filename, {loaded:0,total:0,done:false});
+  } else if (p.status === 'progress') {
+    const old = modelDownloads.get(filename) || {loaded:0,total:0,done:false};
+    const total = Number(p.total) || old.total || 0;
+    const loaded = Number(p.loaded) || (total && Number.isFinite(p.progress) ? total*p.progress/100 : old.loaded);
+    modelDownloads.set(filename,{loaded,total,done:false});
+  } else if (p.status === 'done' || p.status === 'ready') {
+    const old = modelDownloads.get(filename) || {loaded:0,total:0,done:false};
+    modelDownloads.set(filename,{loaded:old.total||old.loaded,total:old.total,done:true});
+  }
+  const entries = [...modelDownloads.entries()];
+  const complete = entries.filter(([,v])=>v.done).length;
+  const active = [...entries].reverse().find(([,v])=>!v.done && v.loaded>0);
+  const name = active ? active[0].split('/').pop() : fileLabel;
+  const v = active ? active[1] : modelDownloads.get(filename);
+  const mb = n => (n/1048576).toFixed(1);
+  const currentPercent = v?.total ? Math.min(100,100*v.loaded/v.total) : (Number.isFinite(p.progress)?p.progress:null);
+  // 这根进度条仅代表当前文件，不代表全部模型文件。
+  $('#progressFill').style.width = currentPercent == null ? '0%' : Math.max(0,currentPercent)+'%';
+  const sizeInfo = v?.total ? `${mb(v.loaded)} / ${mb(v.total)} MB` : (v?.loaded ? `${mb(v.loaded)} MB` : '等待下载');
+  if(active || p.status==='progress') {
+    setStatus(`下载文件：${name}`, 'working', `${sizeInfo} · 已完成 ${complete} 个资源。进度条只表示当前文件，不是总体进度。`);
+  } else {
+    setStatus(`正在准备模型资源（已完成 ${complete} 个文件）`,'working',
+      '多个模型文件会分别下载。完成下载后仍需进行模型初始化。');
+  }
+}
+
 async function loadModel() {
  if(recognizerPromise)return recognizerPromise;
  const selected=$('#computeMode').value;
  const device=selected==='webgpu'&&('gpu' in navigator)?'webgpu':'wasm';
  $('#progressTrack').classList.remove('hidden');
- setStatus('正在连接 TexTeller3 模型资源…','working','首次需下载模型文件（可能超过 500 MB），请保持联网。');
+ setStatus('正在连接 TexTeller3 模型资源…','working','首次下载需要获取多个较大的文件。每个文件单独显示进度。');
  recognizerPromise=(async()=>{
    const {pipeline,env}=await import('https://esm.sh/@huggingface/transformers@3.7.2');
    env.allowRemoteModels=true;
    env.useBrowserCache=true;
    const make=async d=>pipeline('image-to-text','onnx-community/TexTeller3-ONNX',{
      device:d,dtype:d==='webgpu'?'fp16':'q8',
-     progress_callback:p=>{
-      if(p.status==='progress'&&Number.isFinite(p.progress)){
-       $('#progressFill').style.width=Math.max(0,Math.min(100,p.progress))+'%';
-       setStatus('正在下载模型：'+Math.round(p.progress)+'%','working');
-      }else if(p.status==='initiate')setStatus('正在准备模型…','working');
-      else if(p.status==='done')setStatus('正在初始化模型…','working');
-     }
+     progress_callback:showModelProgress
    });
    let pipe;
    try{pipe=await make(device);}catch(e){if(device!=='webgpu')throw e;toast('GPU 模式不可用，正在尝试 CPU 模式');pipe=await make('wasm');}
