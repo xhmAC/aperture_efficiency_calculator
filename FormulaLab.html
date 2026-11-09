@@ -179,16 +179,21 @@ $('#recognizeBtn').onclick=async()=>{
  if(!imageBlob||recognizing)return;
  setBusy(true);$('#progressFill').style.width='0%';const id=++activeJob;
  try{
-  const url=await readAsDataURL(imageBlob);
   const pipe=await loadModel();
-  setStatus('正在识别公式…','working','复杂公式可能需要更长时间。');
-  const result=await pipe(url,{max_new_tokens:512});
+  setStatus('正在处理图片…','working','正在转换为模型要求的单通道灰度图。');
+  // TexTeller3 的预处理配置：num_channels=1, image_mean/std 各仅 1 项。
+  // 不能直接传入 PNG/JPG 的 RGBA(4) 图像，否则会触发通道数不匹配。
+  const {RawImage}=await import('https://esm.sh/@huggingface/transformers@3.7.2');
+  const grayImage=(await RawImage.read(imageBlob)).grayscale();
+  if(grayImage.channels!==1)throw new Error('图片预处理失败：模型需要单通道灰度图');
+  setStatus('正在识别公式…','working','图片已转换为灰度图，正在执行模型推理。');
+  const result=await pipe(grayImage,{max_new_tokens:512});
   if(id!==activeJob)return;
   const latex=Array.isArray(result)?result[0]?.generated_text:result?.generated_text;
   if(!latex||typeof latex!=='string')throw new Error('模型没有返回有效公式');
   $('#latexInput').value=normalizeLatex(latex);render();
   setStatus('识别完成 · 可核对并修改','ready','请注意检查上下标、括号和符号。');toast('识别完成');
- }catch(e){setStatus('识别失败','bad',String(e?.message||e)+'。若是网络问题，可以先单独下载两份量化 ONNX 文件，再点击“导入已下载的 ONNX 文件”。');toast('识别失败：'+String(e?.message||e),true);}
+ }catch(e){setStatus('识别失败','bad',String(e?.message||e)+( /network|fetch|http|cdn/i.test(String(e?.message||e))?'。若为网络错误，可导入已下载的 ONNX 文件。':'。请检查公式截图是否清晰，必要时尝试更换图片。'));toast('识别失败：'+String(e?.message||e),true);}
  finally{setBusy(false);}
 };
 $('#sampleBtn').onclick=()=>{$('#latexInput').value=example;render();toast('示例公式已填入，可直接编辑');};
