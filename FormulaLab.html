@@ -36,7 +36,7 @@ $('#app').innerHTML = `
       </section>
     </div>
     <div class="info-grid"><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">✓</span></div><div><b>图片不上传到识别服务器</b><p>模型在你的浏览器中推理；首次需要从模型托管站下载权重。</p></div></div><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">≡</span></div><div><b>MathType 使用说明</b><p>输出的是 MathType 可导入的 LaTeX 文本，并非 MathType 原生二进制格式；需要在 MathType 中通过 LaTeX 输入/转换功能使用。</p></div></div></div>
-  </main><footer><span>FormulaLab · Browser AI Math OCR</span><a href="https://huggingface.co/onnx-community/TexTeller-ONNX" target="_blank" rel="noopener">模型：TexTeller-ONNX ↗</a></footer>
+  </main><footer><span>FormulaLab · Browser AI Math OCR</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller-ONNX ↗</a></footer>
 </div><div id="toast" class="toast" role="status"></div>`;
 function toast(message, isError=false) { const box=$('#toast'); box.textContent=message; box.classList.toggle('error',isError);box.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('visible'),3200); }
 function setStatus(message, level='neutral', hint) { $('#statusText').textContent=message; $('#statusDot').className='status-led '+level; if(hint!==undefined) $('#statusHint').textContent=hint; }
@@ -58,12 +58,12 @@ async function loadModel() {
  const selected=$('#computeMode').value;
  const device=selected==='webgpu'&&('gpu' in navigator)?'webgpu':'wasm';
  $('#progressTrack').classList.remove('hidden');
- setStatus('正在连接模型资源…','working','首次需要联网下载模型文件。');
+ setStatus('正在连接 TexTeller3 模型资源…','working','首次需下载模型文件（可能超过 500 MB），请保持联网。');
  recognizerPromise=(async()=>{
    const {pipeline,env}=await import('https://esm.sh/@huggingface/transformers@3.7.2');
    env.allowRemoteModels=true;
    env.useBrowserCache=true;
-   const make=async d=>pipeline('image-to-text','onnx-community/TexTeller-ONNX',{
+   const make=async d=>pipeline('image-to-text','onnx-community/TexTeller3-ONNX',{
      device:d,dtype:d==='webgpu'?'fp16':'q8',
      progress_callback:p=>{
       if(p.status==='progress'&&Number.isFinite(p.progress)){
@@ -95,7 +95,7 @@ $('#recognizeBtn').onclick=async()=>{
   if(!latex||typeof latex!=='string')throw new Error('模型没有返回有效公式');
   $('#latexInput').value=normalizeLatex(latex);render();
   setStatus('识别完成 · 可核对并修改','ready','请注意检查上下标、括号和符号。');toast('识别完成');
- }catch(e){setStatus('识别失败','bad',String(e?.message||e));toast('识别失败：'+String(e?.message||e),true);}
+ }catch(e){setStatus('识别失败','bad',String(e?.message||e)+'。若是网络问题，请确认可以访问 Hugging Face 及 CDN。');toast('识别失败：'+String(e?.message||e),true);}
  finally{setBusy(false);}
 };
 $('#sampleBtn').onclick=()=>{$('#latexInput').value=example;render();toast('示例公式已填入，可直接编辑');};
