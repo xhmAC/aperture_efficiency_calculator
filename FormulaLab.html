@@ -14,7 +14,7 @@ let imageBlob=null,imageURL='',modelReady=false,activeJob=0,recognizing=false;
 
 $('#app').innerHTML = `
 <div class="shell">
-  <header class="topbar"><div class="brand"><div class="brand-icon">∑</div><div><b>FormulaLab</b><span>Image to Equation</span></div></div><div class="top-right"><span class="privacy"><span class="ico" aria-hidden="true">✓</span> 浏览器本地识别</span><span class="version">v1.3 · 识别优化版</span></div></header>
+  <header class="topbar"><div class="brand"><div class="brand-icon">∑</div><div><b>FormulaLab</b><span>Image to Equation</span></div></div><div class="top-right"><span class="privacy"><span class="ico" aria-hidden="true">✓</span> 浏览器本地识别</span><span class="version">v1.4 · 外框裁剪版</span></div></header>
   <main>
     <div class="hero"><div class="eyebrow"><span class="dot"></span> AI-POWERED FORMULA RECOGNITION</div><h1>从公式截图，到可编辑的代码</h1><p>粘贴或上传数学公式截图，使用浏览器中的 AI 识别模型生成 LaTeX，并快速复制到 MathType。</p></div>
     <div class="workgrid">
@@ -26,6 +26,8 @@ $('#app').innerHTML = `
         <div class="actions"><button class="button secondary" id="uploadBtn"><span class="ico" aria-hidden="true">▣</span> 选择图片</button><button class="button primary" id="recognizeBtn" disabled><span class="ico" aria-hidden="true">✦</span><span>开始识别</span></button></div>
         <div class="setting"><label for="computeMode">推理设备</label><select id="computeMode"><option value="wasm">CPU · 兼容模式（推荐）</option><option value="webgpu">GPU · WebGPU（实验性）</option></select></div>
         <div class="setting"><label for="contrastMode">公式底色处理</label><select id="contrastMode"><option value="auto">自动识别黑底 / 白底（推荐）</option><option value="invert">强制反色（黑底白字）</option><option value="normal">不反色（白底黑字）</option></select></div>
+        <div class="setting"><label for="frameMode">公式边框处理</label><select id="frameMode"><option value="auto">自动去外框 + 裁剪公式（推荐）</option><option value="on">强制去矩形外框</option><option value="off">不处理边框</option></select></div>
+        <div style="font-size:11px;color:#7e8ba0;margin-top:8px">提示：自动裁剪仅去除贯穿图片的大边线，不会修改公式内容。若识别有误，可切换边框模式再试。</div>
         <div style="margin:12px 0 0"><div style="font-size:11px;color:#708098;margin-bottom:6px">AI 实际接收的图片（白底、灰度、保持比例）</div><div style="background:#f8fafc;border:1px solid #e5ebf3;border-radius:9px;padding:10px;min-height:56px;display:flex;align-items:center;justify-content:center"><img id="processedPreview" alt="识别用的预处理图片" style="max-width:100%;max-height:200px;object-fit:contain;display:none"/><span id="processedPlaceholder" style="color:#9ba9b9;font-size:11px">选择截图后开始识别可查看</span></div></div>
         <div class="model-tools">
           <div class="tools-head"><strong>模型下载加速</strong><span>可选 · 适合下载很慢时使用</span></div>
@@ -51,7 +53,7 @@ $('#app').innerHTML = `
       </section>
     </div>
     <div class="info-grid"><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">✓</span></div><div><b>图片不上传到识别服务器</b><p>模型在你的浏览器中推理；首次需要从模型托管站下载权重。</p></div></div><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">≡</span></div><div><b>MathType 7 专用转换</b><p>识别后的 LaTeX 将经过兼容化处理，保留独立的原始 LaTeX，并提示可能不兼容的命令。</p></div></div></div>
-  </main><footer><span>FormulaLab · 语法校验版 · 黑底自动反色 · q8 轻量模型</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller3-ONNX ↗</a></footer>
+  </main><footer><span>FormulaLab · 外框裁剪版 · 黑底自动反色 · q8 轻量模型</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller3-ONNX ↗</a></footer>
 </div><div id="toast" class="toast" role="status"></div>`;
 function toast(message, isError=false) { const box=$('#toast'); box.textContent=message; box.classList.toggle('error',isError);box.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('visible'),3200); }
 function setStatus(message, level='neutral', hint) { $('#statusText').textContent=message; $('#statusDot').className='status-led '+level; if(hint!==undefined) $('#statusHint').textContent=hint; }
@@ -273,47 +275,81 @@ async function loadModel() {
  })().catch(e=>{recognizerPromise=null;$('#progressTrack').classList.add('hidden');throw e;});
  return recognizerPromise;
 }
+// Black-on-white conversion, long-line frame removal, and content-preserving crop.
+// Line removal only acts on long straight strokes near the outer margin; fractions remain.
 async function prepareFormulaImage(blob) {
-  // 统一背景颜色，避免 RGBA 通道与黑底白字输入导致模型失效。
-  const bitmap = await createImageBitmap(blob);
-  const width=bitmap.width, height=bitmap.height;
-  if(!width||!height)throw new Error('图片宽高无效');
-  // 把图片缩到合理大小，但不改变原始宽高比；后面添加正方形白色留白。
-  const maxEdge=900, shrink=Math.min(1,maxEdge/Math.max(width,height));
-  const w=Math.max(1,Math.round(width*shrink)), h=Math.max(1,Math.round(height*shrink));
+  const bitmap=await createImageBitmap(blob);
+  const shrink=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));
+  const w=Math.max(1,Math.round(bitmap.width*shrink)),h=Math.max(1,Math.round(bitmap.height*shrink));
   const analysis=document.createElement('canvas');analysis.width=w;analysis.height=h;
   const ax=analysis.getContext('2d',{willReadFrequently:true});
-  ax.fillStyle='#fff';ax.fillRect(0,0,w,h);ax.drawImage(bitmap,0,0,w,h);
-  bitmap.close();
-  const source=ax.getImageData(0,0,w,h);let brightness=0, count=0;
-  // 检测边缘区域的背景亮度，比全图均值更适合字符密集的公式。
-  const pixels=source.data;
-  for(let y=0;y<h;y+=Math.max(1,Math.floor(h/100))){
-    for(let x=0;x<w;x+=Math.max(1,Math.floor(w/100))){
-      if(x>w*.17&&x<w*.83&&y>h*.17&&y<h*.83)continue;
-      const idx=(y*w+x)*4;
-      brightness+=(pixels[idx]*.299+pixels[idx+1]*.587+pixels[idx+2]*.114);count++;
+  ax.fillStyle='white';ax.fillRect(0,0,w,h);ax.drawImage(bitmap,0,0,w,h);bitmap.close();
+  const original=ax.getImageData(0,0,w,h),data=original.data;
+  const lum=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++)lum[i]=Math.round(data[4*i]*.299+data[4*i+1]*.587+data[4*i+2]*.114);
+  // Corners / perimeter are preferable to global average for text-heavy images.
+  let outer=0,n=0;
+  for(let y=0;y<h;y+=Math.max(1,Math.floor(h/80)))for(let x=0;x<w;x+=Math.max(1,Math.floor(w/80))){
+    if(x>w*.12&&x<w*.88&&y>h*.12&&y<h*.88)continue;
+    outer+=lum[y*w+x];n++;
+  }
+  const mode=$('#contrastMode').value;
+  const invert=mode==='invert'||(mode==='auto'&&outer/n<128);
+  // Alpha is already composited on white. The binary mask marks only dark ink.
+  const ink=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++){
+    const v=invert?255-lum[i]:lum[i];lum[i]=v;ink[i]=v<155?1:0;
+  }
+  const frameMode=$('#frameMode').value;
+  let removed=0;
+  if(frameMode!=='off'){
+    const rows=[],cols=[];
+    // A frame edge spans at least 72% of width/height, is almost straight,
+    // and lies near the perimeter. This excludes ordinary fraction bars.
+    for(let y=0;y<h;y++){
+      let count=0,run=0,best=0;
+      for(let x=0;x<w;x++){if(ink[y*w+x]){count++;run++;best=Math.max(best,run);}else run=0;}
+      if(best>=w*.72&&y<h*.24||best>=w*.72&&y>h*.76)rows.push(y);
+    }
+    for(let x=0;x<w;x++){
+      let run=0,best=0;
+      for(let y=0;y<h;y++){if(ink[y*w+x]){run++;best=Math.max(best,run);}else run=0;}
+      if((x<w*.24||x>w*.76)&&best>=h*.65)cols.push(x);
+    }
+    // Require evidence of a rectangular outline in auto mode.
+    const enabled=frameMode==='on'||(rows.length>=2&&cols.length>=2)||(rows.length>=2&&w>h*2);
+    if(enabled){
+      const erase=new Uint8Array(w*h);
+      for(const y of rows)for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++)for(let x=0;x<w;x++)if(ink[yy*w+x])erase[yy*w+x]=1;
+      for(const x of cols)for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++)for(let y=0;y<h;y++)if(ink[y*w+xx])erase[y*w+xx]=1;
+      for(let i=0;i<erase.length;i++)if(erase[i]){ink[i]=0;lum[i]=255;removed++;}
     }
   }
-  const method=$('#contrastMode').value;
-  const invert=method==='invert'||(method==='auto' && count>0 && brightness/count<128);
-  // 在像素阶段直接转灰度，消除 alpha、避免重复反色。
-  for(let i=0;i<pixels.length;i+=4){
-    const gray=Math.round(pixels[i]*.299+pixels[i+1]*.587+pixels[i+2]*.114);
-    const value=invert?255-gray:gray;
-    pixels[i]=pixels[i+1]=pixels[i+2]=value;pixels[i+3]=255;
+  // Bounding box on foreground pixels; ignore stray components at extreme edges.
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  if(x1<0){x0=0;y0=0;x1=w-1;y1=h-1;}
+  const pad=Math.max(8,Math.round(Math.max(x1-x0+1,y1-y0+1)*.065));
+  x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(w-1,x1+pad);y1=Math.min(h-1,y1+pad);
+  const cw=x1-x0+1,ch=y1-y0+1;
+  const cropped=document.createElement('canvas');cropped.width=cw;cropped.height=ch;
+  const cx=cropped.getContext('2d');const pixels=cx.createImageData(cw,ch);
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+    const src=(y+y0)*w+(x+x0),dest=4*(y*cw+x);
+    const v=lum[src];pixels.data[dest]=pixels.data[dest+1]=pixels.data[dest+2]=v;pixels.data[dest+3]=255;
   }
-  ax.putImageData(source,0,0);
-  // 保持长宽比并用白色填充正方形，避免宽公式被粗暴拉伸成正方形。
-  const side=Math.max(448,Math.ceil(Math.max(w,h)*1.14));
-  const canvas=document.createElement('canvas');canvas.width=side;canvas.height=side;
-  const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,side,side);
-  ctx.drawImage(analysis,Math.floor((side-w)/2),Math.floor((side-h)/2));
-  const output=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('无法转换图片')),'image/png'));
-  const image=$('#processedPreview');if(image.dataset.url)URL.revokeObjectURL(image.dataset.url);
-  image.dataset.url=URL.createObjectURL(output);image.src=image.dataset.url;
-  image.style.display='block';$('#processedPlaceholder').style.display='none';
-  return {blob:output, invert};
+  cx.putImageData(pixels,0,0);
+  // Square white canvas avoids aspect distortion. The model image processor
+  // subsequently performs its own resize; do not stretch equations.
+  const side=Math.max(448,Math.round(Math.max(cw,ch)*1.08));
+  const out=document.createElement('canvas');out.width=side;out.height=side;
+  const ox=out.getContext('2d');ox.fillStyle='#fff';ox.fillRect(0,0,side,side);
+  ox.drawImage(cropped,Math.round((side-cw)/2),Math.round((side-ch)/2));
+  const output=await new Promise((resolve,reject)=>out.toBlob(v=>v?resolve(v):reject(Error('图片处理失败')),'image/png'));
+  const preview=$('#processedPreview');if(preview.dataset.url)URL.revokeObjectURL(preview.dataset.url);
+  preview.dataset.url=URL.createObjectURL(output);preview.src=preview.dataset.url;preview.style.display='block';
+  $('#processedPlaceholder').style.display='none';
+  return {blob:output,invert,removed};
 }
 function readAsDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 $('#recognizeBtn').onclick=async()=>{
@@ -328,7 +364,7 @@ $('#recognizeBtn').onclick=async()=>{
   const processed=await prepareFormulaImage(imageBlob);
   const grayImage=(await RawImage.read(processed.blob)).grayscale();
   if(grayImage.channels!==1)throw new Error('图片预处理失败：模型需要单通道灰度图');
-  setStatus('正在识别公式…','working','已经处理为适合识别的灰度图，保持原始宽高比。正在推理。');
+  setStatus('正在识别公式…','working',`已转灰度、保留比例；边框处理像素 ${processed.removed} 个。请检查下方预处理预览。`);
   const result=await pipe(grayImage,{max_new_tokens:512});
   if(id!==activeJob)return;
   const latex=Array.isArray(result)?result[0]?.generated_text:result?.generated_text;
@@ -337,6 +373,8 @@ $('#recognizeBtn').onclick=async()=>{
   const fixed=repairLatex(latex);
   $('#latexInput').value=fixed.code;render();
   if(fixed.notes.length)toast('已修复部分 LaTeX 结构问题，请核对公式');
+  const suspicious=/(?:Z_\{?\mathrm\{in\}\}?){2}|\\mathbbf|\\mathbf\{[A-Za-z]\}\\mathbf/.test(fixed.code);
+  if(suspicious)toast('检测到疑似重复符号；语法可渲染不代表识别正确，请核对原图',true);
   setStatus('识别完成 · 请与原图核对','ready','如仍有明显错误，可尝试强制反色或不反色再次识别；量化模型可能存在准确率限制。');toast('识别完成');
  }catch(e){setStatus('识别失败','bad',String(e?.message||e)+( /network|fetch|http|cdn/i.test(String(e?.message||e))?'。若为网络错误，可导入已下载的 ONNX 文件。':'。请检查公式截图是否清晰，必要时尝试更换图片。'));toast('识别失败：'+String(e?.message||e),true);}
  finally{setBusy(false);}
