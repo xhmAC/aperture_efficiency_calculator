@@ -26,8 +26,8 @@ $('#app').innerHTML = `
         <div class="actions"><button class="button secondary" id="uploadBtn"><span class="ico" aria-hidden="true">▣</span> 选择图片</button><button class="button primary" id="recognizeBtn" disabled><span class="ico" aria-hidden="true">✦</span><span>开始识别</span></button></div>
         <div class="setting"><label for="computeMode">推理设备</label><select id="computeMode"><option value="wasm">CPU · 兼容模式（推荐）</option><option value="webgpu">GPU · WebGPU（实验性）</option></select></div>
         <div class="setting"><label for="contrastMode">公式底色处理</label><select id="contrastMode"><option value="auto">自动识别黑底 / 白底（推荐）</option><option value="invert">强制反色（黑底白字）</option><option value="normal">不反色（白底黑字）</option></select></div>
-        <div class="setting"><label for="frameMode">公式边框处理</label><select id="frameMode"><option value="auto">自动去外框 + 裁剪公式（推荐）</option><option value="on">强制去矩形外框</option><option value="off">不处理边框</option></select></div>
-        <div style="font-size:11px;color:#7e8ba0;margin-top:8px">提示：自动裁剪仅去除贯穿图片的大边线，不会修改公式内容。若识别有误，可切换边框模式再试。</div>
+        <div class="setting"><label for="frameMode">公式边框处理</label><select id="frameMode"><option value="auto">自动检测矩形框并裁取内部（推荐）</option><option value="on">尝试检测并裁取矩形框</option><option value="off">不处理边框</option></select></div>
+        <div style="font-size:11px;color:#7e8ba0;margin-top:8px">提示：检测到闭合矩形框时将只保留框内的公式；若预览仍有外框，请先在截图工具中裁剪。</div>
         <div style="margin:12px 0 0"><div style="font-size:11px;color:#708098;margin-bottom:6px">AI 实际接收的图片（白底、灰度、保持比例）</div><div style="background:#f8fafc;border:1px solid #e5ebf3;border-radius:9px;padding:10px;min-height:56px;display:flex;align-items:center;justify-content:center"><img id="processedPreview" alt="识别用的预处理图片" style="max-width:100%;max-height:200px;object-fit:contain;display:none"/><span id="processedPlaceholder" style="color:#9ba9b9;font-size:11px">选择截图后开始识别可查看</span></div></div>
         <div class="model-tools">
           <div class="tools-head"><strong>模型下载加速</strong><span>可选 · 适合下载很慢时使用</span></div>
@@ -105,7 +105,7 @@ function toMathType7(src) {
   const notes=[];
   if (!code) return {code:'',notes:[]};
   code=code.replace(/\\(?:dfrac|tfrac)\b/g,'\\frac');
-  code=code.replace(/\\bm\s*\{([A-Za-z])\}/g,'\\mathbf{$1}');
+  code=code.replace(/\\(?:bm|boldsymbol)\s*\{([A-Za-z])\}/g,'\\mathbf{$1}');
   code=code.replace(/\\widetilde\b/g,'\\tilde');
   code=code.replace(/\\(?:left|right)\b/g,'');
   code=code.replace(/\\(?:bigl|bigr|Bigl|Bigr|biggl|biggr|Biggl|Biggr)\b/g,'');
@@ -301,28 +301,65 @@ async function prepareFormulaImage(blob) {
     const v=invert?255-lum[i]:lum[i];lum[i]=v;ink[i]=v<155?1:0;
   }
   const frameMode=$('#frameMode').value;
-  let removed=0;
+  let removed=0,frameDetected=false,frameDetails='';
   if(frameMode!=='off'){
-    const rows=[],cols=[];
-    // A frame edge spans at least 72% of width/height, is almost straight,
-    // and lies near the perimeter. This excludes ordinary fraction bars.
-    for(let y=0;y<h;y++){
-      let count=0,run=0,best=0;
-      for(let x=0;x<w;x++){if(ink[y*w+x]){count++;run++;best=Math.max(best,run);}else run=0;}
-      if(best>=w*.72&&y<h*.24||best>=w*.72&&y>h*.76)rows.push(y);
+    // Find a pair of long PARALLEL HORIZONTAL frame edges, with aligned endpoints.
+    // A fraction bar alone will NOT be treated as a rectangular frame.
+    const edges=[];
+    const minRun=Math.max(75,Math.floor(w*.48));
+    for(let y=1;y<h-1;y++){
+      let first=-1,last=-1,runStart=-1;
+      for(let x=0;x<=w;x++){
+        const on=x<w&&ink[y*w+x]===1;
+        if(on&&runStart<0)runStart=x;
+        if(!on&&runStart>=0){
+          if(x-runStart>=minRun && (first<0||x-runStart>last-first+1)){
+            first=runStart;last=x-1;
+          }
+          runStart=-1;
+        }
+      }
+      if(first>=0)edges.push({y,x0:first,x1:last,len:last-first+1});
     }
-    for(let x=0;x<w;x++){
-      let run=0,best=0;
-      for(let y=0;y<h;y++){if(ink[y*w+x]){run++;best=Math.max(best,run);}else run=0;}
-      if((x<w*.24||x>w*.76)&&best>=h*.65)cols.push(x);
+    let best=null,score=-1;
+    for(let i=0;i<edges.length;i++)for(let j=i+1;j<edges.length;j++){
+      const a=edges[i],b=edges[j],hh=b.y-a.y;
+      if(hh<Math.max(14,h*.28))continue;
+      const overlap=Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0)+1;
+      if(overlap<Math.min(a.len,b.len)*.9)continue;
+      if(Math.abs(a.x0-b.x0)>Math.max(5,w*.025)||Math.abs(a.x1-b.x1)>Math.max(5,w*.025))continue;
+      // Confirm vertical frame edges. They can be faint or 1 px thick.
+      const xl=Math.round((a.x0+b.x0)/2),xr=Math.round((a.x1+b.x1)/2);
+      let ln=0,rn=0,steps=0;
+      for(let y=a.y+1;y<b.y;y++){
+        steps++;
+        for(let dx=-1;dx<=1;dx++){
+          if(xl+dx>=0&&ink[y*w+xl+dx]){ln++;break;}
+        }
+        for(let dx=-1;dx<=1;dx++){
+          if(xr+dx<w&&ink[y*w+xr+dx]){rn++;break;}
+        }
+      }
+      if(steps&&ln/steps>.55&&rn/steps>.55){
+        const sc=overlap*hh;
+        if(sc>score){score=sc;best={top:a.y,bottom:b.y,left:Math.max(a.x0,b.x0),right:Math.min(a.x1,b.x1)};}
+      }
     }
-    // Require evidence of a rectangular outline in auto mode.
-    const enabled=frameMode==='on'||(rows.length>=2&&cols.length>=2)||(rows.length>=2&&w>h*2);
-    if(enabled){
-      const erase=new Uint8Array(w*h);
-      for(const y of rows)for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++)for(let x=0;x<w;x++)if(ink[yy*w+x])erase[yy*w+x]=1;
-      for(const x of cols)for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++)for(let y=0;y<h;y++)if(ink[y*w+xx])erase[y*w+xx]=1;
-      for(let i=0;i<erase.length;i++)if(erase[i]){ink[i]=0;lum[i]=255;removed++;}
+    if(best){
+      // Explicitly mask EVERYTHING outside the frame interior, not just frame strokes.
+      // A later bounding-box crop cannot accidentally reintroduce the border.
+      frameDetected=true;
+      const margin=2;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+        if(x<=best.left+margin||x>=best.right-margin||y<=best.top+margin||y>=best.bottom-margin){
+          const idx=y*w+x;
+          if(ink[idx])removed++;
+          ink[idx]=0;lum[idx]=255;
+        }
+      }
+      frameDetails=`已检测到矩形外框，并裁取内部公式（边界：${best.left},${best.top}–${best.right},${best.bottom}）`;
+    } else {
+      frameDetails='未找到完整矩形边框；请确认预处理预览，必要时在上传前裁掉外框。';
     }
   }
   // Bounding box on foreground pixels; ignore stray components at extreme edges.
@@ -349,7 +386,7 @@ async function prepareFormulaImage(blob) {
   const preview=$('#processedPreview');if(preview.dataset.url)URL.revokeObjectURL(preview.dataset.url);
   preview.dataset.url=URL.createObjectURL(output);preview.src=preview.dataset.url;preview.style.display='block';
   $('#processedPlaceholder').style.display='none';
-  return {blob:output,invert,removed};
+  return {blob:output,invert,removed,frameDetected,frameDetails};
 }
 function readAsDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 $('#recognizeBtn').onclick=async()=>{
@@ -364,13 +401,26 @@ $('#recognizeBtn').onclick=async()=>{
   const processed=await prepareFormulaImage(imageBlob);
   const grayImage=(await RawImage.read(processed.blob)).grayscale();
   if(grayImage.channels!==1)throw new Error('图片预处理失败：模型需要单通道灰度图');
-  setStatus('正在识别公式…','working',`已转灰度、保留比例；边框处理像素 ${processed.removed} 个。请检查下方预处理预览。`);
+  setStatus('正在识别公式…','working',`已转灰度、保留比例；${processed.frameDetails || "未启用边框处理"}。请检查下方预处理预览。`);
   const result=await pipe(grayImage,{max_new_tokens:512});
   if(id!==activeJob)return;
   const latex=Array.isArray(result)?result[0]?.generated_text:result?.generated_text;
   if(!latex||typeof latex!=='string')throw new Error('模型没有返回有效公式');
   $('#rawModelOutput').value=latex;
   const fixed=repairLatex(latex);
+  // OCR may hallucinate \boxed when it sees an image frame. Only remove an
+  // *outermost* wrapper if we actually detected and cropped a visible frame.
+  if(processed.frameDetected){
+    const trimmed=fixed.code.trim();
+    if(trimmed.startsWith('\\boxed{')){
+      let depth=1,end=-1;
+      for(let k=7;k<trimmed.length;k++){
+        if(trimmed[k]==='{')depth++;
+        else if(trimmed[k]==='}'&&!--depth){end=k;break;}
+      }
+      if(end===trimmed.length-1){fixed.code=trimmed.slice(7,-1);fixed.notes.push('移除由外框引起的最外层 boxed 命令');}
+    }
+  }
   $('#latexInput').value=fixed.code;render();
   if(fixed.notes.length)toast('已修复部分 LaTeX 结构问题，请核对公式');
   const suspicious=/(?:Z_\{?\mathrm\{in\}\}?){2}|\\mathbbf|\\mathbf\{[A-Za-z]\}\\mathbf/.test(fixed.code);
