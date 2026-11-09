@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FormulaLab — MathType 7 兼容版</title>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FormulaLab — 公式语法校验版</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
 <style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
@@ -41,6 +41,8 @@ $('#app').innerHTML = `
         <div id="formulaPreview" class="formula-preview"><div class="preview-placeholder"><span>∫</span><p>识别完成后，公式将显示在这里</p></div></div>
         <div class="code-label"><span><span class="ico" aria-hidden="true">{}</span> LaTeX 代码</span><button class="mini-button" data-copy="latex"><span class="ico" aria-hidden="true">⧉</span> 复制</button></div>
         <textarea id="latexInput" spellcheck="false" placeholder="识别结果将在此显示；也可以直接输入 LaTeX 进行预览…"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:9px 0 6px"><button class="mini-button" type="button" id="repairBtn">🛠 修复常见 LaTeX 语法错误</button><button class="mini-button" type="button" id="imageExampleBtn">✓ 测试截图中的两条公式</button><span id="syntaxIndicator" style="font-size:11px;color:#60758d" aria-live="polite">等待输入公式</span></div>
+        <details style="font-size:11px;color:#60758d;margin:7px 0 14px"><summary>查看 AI 原始输出（用于对照）</summary><textarea id="rawModelOutput" readonly spellcheck="false" style="height:74px;margin-top:7px" placeholder="识别完成后这里保留未经修正的原始文本"></textarea></details>
         <div class="code-label mathtype-label"><span><span class="ico" aria-hidden="true">≡</span> MathType 7 兼容 TeX</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="mini-button" data-copy="mathtype">⧉ 复制代码</button><button class="mini-button" data-copy="mathtype-wrapped">$ 复制带定界符</button></div></div>
         <textarea id="mathtypeCode" spellcheck="false" readonly aria-label="MathType 7 兼容 TeX 代码" style="height:95px;background:#f5f8fe">识别后生成 MathType 7 兼容代码</textarea>
         <div id="mtWarnings" class="mt-warnings" aria-live="polite">识别完成后将检查 MathType 7 可能不支持的命令。</div>
@@ -49,18 +51,60 @@ $('#app').innerHTML = `
       </section>
     </div>
     <div class="info-grid"><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">✓</span></div><div><b>图片不上传到识别服务器</b><p>模型在你的浏览器中推理；首次需要从模型托管站下载权重。</p></div></div><div class="info-card"><div class="info-icon"><span class="ico" aria-hidden="true">≡</span></div><div><b>MathType 7 专用转换</b><p>识别后的 LaTeX 将经过兼容化处理，保留独立的原始 LaTeX，并提示可能不兼容的命令。</p></div></div></div>
-  </main><footer><span>FormulaLab · MathType 7 兼容版 · 黑底自动反色 · q8 轻量模型</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller3-ONNX ↗</a></footer>
+  </main><footer><span>FormulaLab · 语法校验版 · 黑底自动反色 · q8 轻量模型</span><a href="https://huggingface.co/onnx-community/TexTeller3-ONNX" target="_blank" rel="noopener">模型：TexTeller3-ONNX ↗</a></footer>
 </div><div id="toast" class="toast" role="status"></div>`;
 function toast(message, isError=false) { const box=$('#toast'); box.textContent=message; box.classList.toggle('error',isError);box.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('visible'),3200); }
 function setStatus(message, level='neutral', hint) { $('#statusText').textContent=message; $('#statusDot').className='status-led '+level; if(hint!==undefined) $('#statusHint').textContent=hint; }
 function setBusy(value) { recognizing=value; $('#recognizeBtn').disabled=value || !imageBlob; $('#recognizeBtn span').textContent=value?'正在识别…':'开始识别'; $('#uploadBtn').disabled=value; $('#computeMode').disabled=value || modelReady; }
-function normalizeLatex(s) { return s.trim().replace(/^\$\$([\s\S]*)\$\$$/,'$1').replace(/^\$([\s\S]*)\$$/,'$1').replace(/^\\\[([\s\S]*)\\\]$/,'$1').replace(/^\\\(([\s\S]*)\\\)$/,'$1').trim(); }
+// Only strip display delimiters at the boundary. Preserve actual equation content.
+function normalizeLatex(s) {
+  return String(s??'').trim()
+    .replace(/^\s*\$\$([\s\S]*?)\$\$\s*$/,'$1')
+    .replace(/^\s*\$([\s\S]*?)\$\s*$/,'$1')
+    .trim();
+}
+// Split multiple display math blocks (OCR sometimes emits \\] \\[ between two equations).
+function splitFormulas(s) {
+  let text=normalizeLatex(s).replace(/\r/g,'').replace(/\\\]\s*\\\[/g,'\n@@SPLIT@@\n');
+  text=text.replace(/\\\[|\\\]/g,'');
+  text=text.replace(/\$\$\s*\$\$/g,'\n@@SPLIT@@\n');
+  return text.split(/@@SPLIT@@|\n\s*\n/).map(x=>x.trim()).filter(Boolean);
+}
+// Safe structural repairs only: this cannot correct semantic hallucinations from OCR.
+function repairFormulaFragment(s) {
+  let x=s.trim();let changes=[];
+  const old=x;
+  x=x.replace(/\\(?:bm|mathbf)\s*\{(10|e)\}/g,'$1');
+  if(x!==old)changes.push('移除套在数字或指数底数上的不必要粗体');
+  let out='',depth=0,removed=0;
+  for(let i=0;i<x.length;i++){
+    const c=x[i];
+    if(c==='\\' && i+1<x.length){out+=c+x[++i];continue;}
+    if(c==='{'){depth++;out+=c;}
+    else if(c==='}') {if(depth>0){depth--;out+=c;}else removed++;}
+    else out+=c;
+  }
+  if(removed)changes.push('移除 '+removed+' 个无匹配的右大括号');
+  if(depth){out+='}'.repeat(depth);changes.push('补齐 '+depth+' 个右大括号（请核对位置）');}
+  return {code:out,changes};
+}
+function repairLatex(s) {
+ const pieces=splitFormulas(s).flatMap(x=>x.split(/\n(?=\s*\\(?:widetilde|tilde|vec|mathbf|hat|overline)\b)/).map(t=>t.trim()).filter(Boolean));
+ const items=pieces.map(repairFormulaFragment);
+ return {code:items.map(i=>i.code).join('\n\n'),notes:items.flatMap(i=>i.changes)};
+}
+function toPreviewLatex(s){
+ const items=splitFormulas(s);
+ return items.length>1?'\\begin{aligned}'+items.map(t=>t.trim()).join('\\\\[1.4em]')+'\\end{aligned}':(items[0]||'');
+}
 // MathType 7 支持 TeX 子集；只处理语义安全的改写，并警告不确定的语法。
 function toMathType7(src) {
-  let code = normalizeLatex(src);
+  let code = splitFormulas(src).join("\n");
   const notes=[];
   if (!code) return {code:'',notes:[]};
   code=code.replace(/\\(?:dfrac|tfrac)\b/g,'\\frac');
+  code=code.replace(/\\bm\s*\{([A-Za-z])\}/g,'\\mathbf{$1}');
+  code=code.replace(/\\widetilde\b/g,'\\tilde');
   code=code.replace(/\\(?:left|right)\b/g,'');
   code=code.replace(/\\(?:bigl|bigr|Bigl|Bigr|biggl|biggr|Biggl|Biggr)\b/g,'');
   code=code.replace(/\\(?:lvert|rvert)\b/g,'|').replace(/\\(?:lVert|rVert)\b/g,'\\|');
@@ -90,15 +134,21 @@ function toMathType7(src) {
   return {code:code.trim(),notes:[...new Set(notes)]};
 }
 function render() {
-  let latex=normalizeLatex($('#latexInput').value);
+  const latex=normalizeLatex($('#latexInput').value);
   const mt=toMathType7(latex);
   $('#mathtypeCode').value=mt.code;
   const warnings=$('#mtWarnings');warnings.classList.toggle('warning',mt.notes.length>0);
-  warnings.textContent=!latex?'识别完成后将检查 MathType 7 可能不支持的命令。':mt.notes.length?'兼容提醒：'+mt.notes.join('；'):'已完成基础兼容化。注意：MathType 7 仅支持 TeX 子集，请在粘贴后核对公式。';
-  const target=$('#formulaPreview');
-  if(!latex) {target.innerHTML='<div class="preview-placeholder"><span>∫</span><p>识别完成后，公式将显示在这里</p></div>';target.classList.remove('render-error');return;}
-  try {katex.render(latex,target,{displayMode:true,throwOnError:true,strict:'ignore',trust:false,maxExpand:1000});target.classList.remove('render-error');}
-  catch(error) {target.textContent='公式暂时无法渲染：'+error.message;target.classList.add('render-error');}
+  warnings.textContent=!latex?'识别完成后将检查 MathType 7 可能不支持的命令。':mt.notes.length?'兼容提醒：'+mt.notes.join('；'):'MathType 7 代码已生成。若原图含两条公式，请分别复制单行导入 MathType 7。';
+  const target=$('#formulaPreview'), indicator=$('#syntaxIndicator');
+  if(!latex) {target.innerHTML='<div class="preview-placeholder"><span>∫</span><p>识别完成后，公式将显示在这里</p></div>';target.classList.remove('render-error');indicator.textContent='等待输入公式';return;}
+  if(!window.katex){target.textContent='公式预览组件未加载，请检查 KaTeX CDN 是否可以访问。';target.classList.add('render-error');indicator.textContent='KaTeX 资源加载失败';return;}
+  try {
+    katex.render(toPreviewLatex(latex),target,{displayMode:true,throwOnError:true,strict:'ignore',trust:false,maxExpand:1000});
+    target.classList.remove('render-error');indicator.textContent='✓ 公式语法可渲染（仍需核对内容）';indicator.style.color='#23865b';
+  } catch(error) {
+    target.textContent='LaTeX 语法错误：'+error.message+'。可点击「修复常见 LaTeX 语法错误」，或手动修改代码。';
+    target.classList.add('render-error');indicator.textContent='✕ LaTeX 语法错误';indicator.style.color='#bf4a40';
+  }
 }
 $('#latexInput').addEventListener('input',render);
 function acceptImage(file) { if(!file || !file.type.startsWith('image/')) { toast('请选择有效的图片文件（PNG/JPG/WEBP 等）',true);return; }if(file.size>20*1024*1024){toast('图片请小于 20 MB',true);return;} if(imageURL) URL.revokeObjectURL(imageURL); imageBlob=file;imageURL=URL.createObjectURL(file);$('#sourceImage').src=imageURL;$('#emptyUpload').classList.add('hidden');$('#imageFrame').classList.remove('hidden');$('#recognizeBtn').disabled=recognizing;toast('公式图片已载入，可开始识别'); }
@@ -283,14 +333,22 @@ $('#recognizeBtn').onclick=async()=>{
   if(id!==activeJob)return;
   const latex=Array.isArray(result)?result[0]?.generated_text:result?.generated_text;
   if(!latex||typeof latex!=='string')throw new Error('模型没有返回有效公式');
-  $('#latexInput').value=normalizeLatex(latex);render();
+  $('#rawModelOutput').value=latex;
+  const fixed=repairLatex(latex);
+  $('#latexInput').value=fixed.code;render();
+  if(fixed.notes.length)toast('已修复部分 LaTeX 结构问题，请核对公式');
   setStatus('识别完成 · 请与原图核对','ready','如仍有明显错误，可尝试强制反色或不反色再次识别；量化模型可能存在准确率限制。');toast('识别完成');
  }catch(e){setStatus('识别失败','bad',String(e?.message||e)+( /network|fetch|http|cdn/i.test(String(e?.message||e))?'。若为网络错误，可导入已下载的 ONNX 文件。':'。请检查公式截图是否清晰，必要时尝试更换图片。'));toast('识别失败：'+String(e?.message||e),true);}
  finally{setBusy(false);}
 };
+const screenshotExample=String.raw`\widetilde{\mathbf{E}}_{\theta}=\sqrt{10^{G_{\theta}^{\mathrm{dBi}}/10}}\,e^{j\psi_{\theta}}
+
+\widetilde{\mathbf{E}}_{\varphi}=\sqrt{10^{G_{\varphi}^{\mathrm{dBi}}/10}}\,e^{j\psi_{\varphi}}`;
+$('#imageExampleBtn').onclick=()=>{$('#latexInput').value=screenshotExample;render();toast('已载入截图中的正确公式，可测试预览与复制');};
+$('#repairBtn').onclick=()=>{const original=$('#latexInput').value;if(!original.trim()){toast('请先识别或输入公式',true);return;}const fixed=repairLatex(original);$('#latexInput').value=fixed.code;render();toast(fixed.notes.length?'已做语法修复，请对照原图检查':'未发现可安全自动修复的结构错误');};
 $('#sampleBtn').onclick=()=>{$('#latexInput').value=example;render();toast('示例公式已填入，可直接编辑');};
 async function copyValue(value){try{await navigator.clipboard.writeText(value);toast('已复制到剪贴板');}catch{const ta=document.createElement('textarea');ta.value=value;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();toast(ok?'已复制到剪贴板':'复制失败，请手动选择文本',!ok);}}
-document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=()=>{const latex=normalizeLatex($('#latexInput').value);if(!latex){toast('请先识别或输入公式',true);return;}const mode=btn.dataset.copy;const mt=toMathType7(latex).code;copyValue(mode==='latex'?latex:mode==='mathtype-wrapped'?'$'+mt+'$':mt);});
+document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=()=>{const latex=normalizeLatex($('#latexInput').value);if(!latex){toast('请先识别或输入公式',true);return;}const mode=btn.dataset.copy;const mt=toMathType7(latex).code;if(mode!=='latex' && splitFormulas(latex).length>1)toast('检测到多条公式：MathType 7 建议每次粘贴一条',true);copyValue(mode==='latex'?latex:mode==='mathtype-wrapped'?'$'+mt+'$':mt);});
 $('#saveBtn').onclick=()=>{const code=normalizeLatex($('#latexInput').value);if(!code){toast('请先识别或输入公式',true);return;}const blob=new Blob([`\\[\n${code}\n\\]\n`],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='formula.tex';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 render();
 
